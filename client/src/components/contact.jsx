@@ -17,38 +17,48 @@ function Contact() {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setStatus("");
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setStatus("");
 
-    try {
-      const response = await fetch("http://localhost:5000/api/messages", {
+  try {
+    const response = await fetch(
+      "https://portfolio-mfrd.onrender.com/api/contact",
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to send message");
       }
+    );
 
-      setStatus("Message sent successfully!");
-      setFormData({
-        name: "",
-        email: "",
-        message: "",
-      });
-    } catch (error) {
-      setStatus(error.message || "Something went wrong");
-    } finally {
-      setLoading(false);
+    const text = await response.text();
+    let data;
+
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Server did not return JSON. Check backend deployment.");
     }
-  };
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || "Failed to send message");
+    }
+
+    setStatus("Message sent successfully!");
+    setFormData({
+      name: "",
+      email: "",
+      message: "",
+    });
+  } catch (error) {
+    setStatus(error.message || "Something went wrong");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <section id="contact" className="contact-section">
