@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const nodemailer = require("nodemailer");
 const Message = require("./model");
 
 dotenv.config();
@@ -15,7 +16,7 @@ app.get("/", (req, res) => {
   res.send("Portfolio server is running");
 });
 
-// CREATE message
+
 app.post("/api/contact", async (req, res) => {
   try {
     const { name, email, message } = req.body;
@@ -27,22 +28,51 @@ app.post("/api/contact", async (req, res) => {
       });
     }
 
+
     const newMessage = await Message.create({ name, email, message });
+
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+
+    await transporter.sendMail({
+      from: `"Portfolio Contact Form" <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_USER,
+      replyTo: email,
+      subject: `New Portfolio Message from ${name}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <h2>New Contact Form Message</h2>
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Message:</strong></p>
+          <p>${message}</p>
+        </div>
+      `,
+    });
 
     res.status(201).json({
       success: true,
-      message: "Message saved successfully",
+      message: "Message saved and email sent successfully",
       data: newMessage,
     });
   } catch (error) {
+    console.error("Contact form error:", error);
+
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: "Failed to save message or send email",
     });
   }
 });
 
-// GET all messages
+
 app.get("/api/messages", async (req, res) => {
   try {
     const messages = await Message.find().sort({ createdAt: -1 });
@@ -60,7 +90,7 @@ app.get("/api/messages", async (req, res) => {
   }
 });
 
-// GET single message by ID
+
 app.get("/api/messages/:id", async (req, res) => {
   try {
     const message = await Message.findById(req.params.id);
@@ -84,7 +114,7 @@ app.get("/api/messages/:id", async (req, res) => {
   }
 });
 
-// UPDATE message by ID
+
 app.put("/api/messages/:id", async (req, res) => {
   try {
     const updatedMessage = await Message.findByIdAndUpdate(
@@ -115,7 +145,7 @@ app.put("/api/messages/:id", async (req, res) => {
   }
 });
 
-// DELETE message by ID
+
 app.delete("/api/messages/:id", async (req, res) => {
   try {
     const deletedMessage = await Message.findByIdAndDelete(req.params.id);
