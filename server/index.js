@@ -28,18 +28,20 @@ app.post("/api/contact", async (req, res) => {
       });
     }
 
-
     const newMessage = await Message.create({ name, email, message });
 
-
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 587,
+      secure: false,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
       },
+      tls: {
+        rejectUnauthorized: false,
+      },
     });
-
 
     await transporter.sendMail({
       from: `"Portfolio Contact Form" <${process.env.EMAIL_USER}>`,
@@ -47,13 +49,11 @@ app.post("/api/contact", async (req, res) => {
       replyTo: email,
       subject: `New Portfolio Message from ${name}`,
       html: `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-          <h2>New Contact Form Message</h2>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Message:</strong></p>
-          <p>${message}</p>
-        </div>
+        <h2>New Contact Message</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Message:</strong></p>
+        <p>${message}</p>
       `,
     });
 
@@ -63,7 +63,7 @@ app.post("/api/contact", async (req, res) => {
       data: newMessage,
     });
   } catch (error) {
-    console.error("Contact form error:", error);
+    console.log("Contact form error:", error);
 
     res.status(500).json({
       success: false,
