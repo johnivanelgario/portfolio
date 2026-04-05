@@ -2,20 +2,20 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const { Resend } = require("resend");
 const Message = require("./model");
 
 dotenv.config();
 
 const app = express();
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 app.use(cors());
 app.use(express.json());
 
+
 app.get("/", (req, res) => {
   res.send("Portfolio server is running");
 });
+
 
 app.post("/api/contact", async (req, res) => {
   try {
@@ -28,47 +28,27 @@ app.post("/api/contact", async (req, res) => {
       });
     }
 
-    const newMessage = await Message.create({ name, email, message });
-
-    const { data, error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "Portfolio Contact <onboarding@resend.dev>",
-      to: [process.env.MY_EMAIL],
-      replyTo: email,
-      subject: `New Portfolio Message from ${name}`,
-      html: `
-        <h2>New Contact Message</h2>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Message:</strong></p>
-        <p>${message}</p>
-      `,
+    const newMessage = await Message.create({
+      name,
+      email,
+      message,
     });
-
-    if (error) {
-      console.log("Resend error:", error);
-
-      return res.status(500).json({
-        success: false,
-        error: "Message saved but email failed to send",
-        resendError: error,
-      });
-    }
 
     res.status(201).json({
       success: true,
-      message: "Message saved and email sent successfully",
+      message: "Message saved successfully",
       data: newMessage,
-      emailData: data,
     });
   } catch (error) {
     console.log("Contact form error:", error);
 
     res.status(500).json({
       success: false,
-      error: "Failed to save message or send email",
+      error: "Failed to save message",
     });
   }
 });
+
 
 app.get("/api/messages", async (req, res) => {
   try {
@@ -86,6 +66,7 @@ app.get("/api/messages", async (req, res) => {
     });
   }
 });
+
 
 app.get("/api/messages/:id", async (req, res) => {
   try {
@@ -109,6 +90,7 @@ app.get("/api/messages/:id", async (req, res) => {
     });
   }
 });
+
 
 app.put("/api/messages/:id", async (req, res) => {
   try {
@@ -140,6 +122,7 @@ app.put("/api/messages/:id", async (req, res) => {
   }
 });
 
+
 app.delete("/api/messages/:id", async (req, res) => {
   try {
     const deletedMessage = await Message.findByIdAndDelete(req.params.id);
@@ -162,6 +145,7 @@ app.delete("/api/messages/:id", async (req, res) => {
     });
   }
 });
+
 
 mongoose
   .connect(process.env.MONGODB_URI)
