@@ -2,12 +2,13 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const Message = require("./model");
 
 dotenv.config();
 
 const app = express();
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 app.use(cors());
 app.use(express.json());
@@ -15,7 +16,6 @@ app.use(express.json());
 app.get("/", (req, res) => {
   res.send("Portfolio server is running");
 });
-
 
 app.post("/api/contact", async (req, res) => {
   try {
@@ -30,22 +30,9 @@ app.post("/api/contact", async (req, res) => {
 
     const newMessage = await Message.create({ name, email, message });
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"Portfolio Contact Form" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER,
+    const { data, error } = await resend.emails.send({
+      from: process.env.RESEND_FROM_EMAIL || "Portfolio Contact <onboarding@resend.dev>",
+      to: [process.env.MY_EMAIL],
       replyTo: email,
       subject: `New Portfolio Message from ${name}`,
       html: `
@@ -57,10 +44,21 @@ app.post("/api/contact", async (req, res) => {
       `,
     });
 
+    if (error) {
+      console.log("Resend error:", error);
+
+      return res.status(500).json({
+        success: false,
+        error: "Message saved but email failed to send",
+        resendError: error,
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: "Message saved and email sent successfully",
       data: newMessage,
+      emailData: data,
     });
   } catch (error) {
     console.log("Contact form error:", error);
@@ -71,7 +69,6 @@ app.post("/api/contact", async (req, res) => {
     });
   }
 });
-
 
 app.get("/api/messages", async (req, res) => {
   try {
@@ -89,7 +86,6 @@ app.get("/api/messages", async (req, res) => {
     });
   }
 });
-
 
 app.get("/api/messages/:id", async (req, res) => {
   try {
@@ -113,7 +109,6 @@ app.get("/api/messages/:id", async (req, res) => {
     });
   }
 });
-
 
 app.put("/api/messages/:id", async (req, res) => {
   try {
@@ -144,7 +139,6 @@ app.put("/api/messages/:id", async (req, res) => {
     });
   }
 });
-
 
 app.delete("/api/messages/:id", async (req, res) => {
   try {
